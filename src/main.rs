@@ -9,21 +9,19 @@ use std::{
 const LABELS: [char; 9] = ['0', '1', '2', '3', '4', '5', '6', '7', '8'];
 
 #[derive(Clone, Debug)]
-enum Mark {
+enum Player {
     X,
     O,
-    None,
 }
 
-impl Display for Mark {
+impl Display for Player {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
             "{}",
             match self {
-                Mark::X => " X ",
-                Mark::O => " O ",
-                Mark::None => "   ",
+                Player::X => " X ",
+                Player::O => " O ",
             }
         )
     }
@@ -33,7 +31,7 @@ impl Display for Mark {
 struct Board {
     rows: usize,
     cols: usize,
-    cells: Vec<Vec<Mark>>,
+    cells: Vec<Vec<Option<Player>>>,
 }
 
 impl Default for Board {
@@ -43,7 +41,7 @@ impl Default for Board {
         Self {
             rows,
             cols,
-            cells: vec![vec![Mark::None; cols]; rows],
+            cells: vec![vec![None; cols]; rows],
         }
     }
 }
@@ -59,7 +57,10 @@ impl Display for Board {
             let row = &self.cells[r];
             let s = row
                 .iter()
-                .map(|x| x.to_string())
+                .map(|x| match x {
+                    Some(player) => player.to_string(),
+                    None => "   ".to_owned(),
+                })
                 .collect::<Vec<String>>()
                 .join("┃");
             // let char = r.to_string().chars().nth(0).unwrap();
@@ -76,11 +77,22 @@ impl Display for Board {
     }
 }
 
+enum TurnResult<T> {
+    Victory(T),
+    Continue,
+}
+
+impl Board {
+    fn evaluate(&self) -> TurnResult<Player> {
+        TurnResult::Continue
+    }
+}
+
 fn main() -> Result<(), ParseIntError> {
     let mut board = Board::default();
     let mut line = String::new();
 
-    let mut player = Mark::X;
+    let mut player = Player::X;
 
     loop {
         println!("{}", board);
@@ -93,17 +105,24 @@ fn main() -> Result<(), ParseIntError> {
                 let r = x.parse::<usize>()?;
                 let c = y.parse::<usize>()?;
 
-                board.cells[r][c] = player.clone();
+                board.cells[r][c] = Some(player.clone());
             }
             None => todo!(),
         }
 
-        line.clear();
+        match board.evaluate() {
+            TurnResult::Continue => {
+                line.clear();
 
-        player = match player {
-            Mark::X => Mark::O,
-            Mark::O => Mark::X,
-            _ => todo!(),
+                player = match player {
+                    Player::X => Player::O,
+                    Player::O => Player::X,
+                }
+            }
+            TurnResult::Victory(player) => {
+                println!("Player {} wins!", player);
+                return Ok(());
+            }
         }
     }
 }
